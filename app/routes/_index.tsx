@@ -640,12 +640,19 @@ export default function Index() {
             </a>
 
             <div className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12 cursor-pointer">
-              <FileText className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
-              <h3 className="text-xl font-light mb-3">Full Paper</h3>
-              <p className="text-stone-400 text-sm font-light leading-relaxed">
-                Complete methodology and analysis
-              </p>
-              <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
+              <a
+                href="https://drive.google.com/file/d/1BAVcPIIyiZTJ6vAl6X3uGh-rAPzXX5bY/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
+              >
+                <FileText className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
+                <h3 className="text-xl font-light mb-3">Full Paper</h3>
+                <p className="text-stone-400 text-sm font-light leading-relaxed">
+                  Complete methodology and analysis
+                </p>
+                <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
+              </a>
             </div>
           </div>
 
