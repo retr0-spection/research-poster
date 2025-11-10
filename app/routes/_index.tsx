@@ -639,9 +639,9 @@ export default function Index() {
               <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
             </a>
 
-            <div className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12 cursor-pointer">
+            <div className="grid sm:grid-cols-2 gap-6">
               <a
-                href="https://drive.google.com/file/d/1BAVcPIIyiZTJ6vAl6X3uGh-rAPzXX5bY/view?usp=sharing"
+                href="https://drive.google.com/file/d/1oVlJaQwjXzvfYT0gtZjwbJHh_wla5cF1/view?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
