@@ -8,6 +8,21 @@ import {
   ChevronDown,
   Headphones,
 } from "lucide-react";
+import { MetaFunction } from "@remix-run/node";
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: "From minutes to milliseconds: Audio Super Resolution" },
+    {
+      property: "og:title",
+      content: "From minutes to milliseconds: Audio Super Resolution",
+    },
+    {
+      name: "description",
+      content: "Audio Super Resolution Research",
+    },
+  ];
+};
 
 export default function Index() {
   const [scrollY, setScrollY] = useState(0);
