@@ -6,6 +6,7 @@ import {
   FileText,
   ArrowRight,
   ChevronDown,
+  Headphones,
 } from "lucide-react";
 
 export default function Index() {
@@ -14,11 +15,14 @@ export default function Index() {
   const [lcmProgress, setLcmProgress] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [playingAudio, setPlayingAudio] = useState(null);
+  const [podcastPlaying, setPodcastPlaying] = useState(false);
+  const [podcastProgress, setPodcastProgress] = useState(0);
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [applicationsOpen, setApplicationsOpen] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const audioRefs = useRef({});
+  const podcastRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -26,34 +30,54 @@ export default function Index() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const intervalsRef = useRef({ lcm: null, mbd: null });
+
   const startAnimation = () => {
+    // Clear any existing intervals
+    if (intervalsRef.current.lcm) clearInterval(intervalsRef.current.lcm);
+    if (intervalsRef.current.mbd) clearInterval(intervalsRef.current.mbd);
+
     setIsAnimating(true);
     setMbdProgress(0);
     setLcmProgress(0);
 
     const lcmDuration = 111;
-    const lcmInterval = setInterval(() => {
-      setLcmProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(lcmInterval);
-          return 100;
-        }
-        return prev + 100 / (lcmDuration / 10);
-      });
-    }, 10);
+    const lcmStartTime = Date.now();
+
+    intervalsRef.current.lcm = setInterval(() => {
+      const elapsed = Date.now() - lcmStartTime;
+      const progress = Math.min((elapsed / lcmDuration) * 100, 100);
+      setLcmProgress(progress);
+
+      if (progress >= 100) {
+        clearInterval(intervalsRef.current.lcm);
+        intervalsRef.current.lcm = null;
+      }
+    }, 16);
 
     const mbdDuration = 61837;
-    const mbdInterval = setInterval(() => {
-      setMbdProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(mbdInterval);
-          setIsAnimating(false);
-          return 100;
-        }
-        return prev + 100 / (mbdDuration / 10);
-      });
-    }, 10);
+    const mbdStartTime = Date.now();
+
+    intervalsRef.current.mbd = setInterval(() => {
+      const elapsed = Date.now() - mbdStartTime;
+      const progress = Math.min((elapsed / mbdDuration) * 100, 100);
+      setMbdProgress(progress);
+
+      if (progress >= 100) {
+        clearInterval(intervalsRef.current.mbd);
+        intervalsRef.current.mbd = null;
+        setIsAnimating(false);
+      }
+    }, 16);
   };
+
+  // Cleanup intervals on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalsRef.current.lcm) clearInterval(intervalsRef.current.lcm);
+      if (intervalsRef.current.mbd) clearInterval(intervalsRef.current.mbd);
+    };
+  }, []);
 
   const audioSamples = [
     {
@@ -77,6 +101,12 @@ export default function Index() {
   ];
 
   const handlePlayAudio = (id) => {
+    // Stop podcast if playing
+    if (podcastRef.current && podcastPlaying) {
+      podcastRef.current.pause();
+      setPodcastPlaying(false);
+    }
+
     // Stop all other audio
     Object.keys(audioRefs.current).forEach((key) => {
       if (key !== id && audioRefs.current[key]) {
@@ -106,6 +136,44 @@ export default function Index() {
       if (audioRefs.current[id]) {
         audioRefs.current[id].currentTime = 0;
       }
+    }
+  };
+
+  const handlePodcastToggle = () => {
+    // Stop all sample audio if playing
+    if (playingAudio) {
+      Object.keys(audioRefs.current).forEach((key) => {
+        if (audioRefs.current[key]) {
+          audioRefs.current[key].pause();
+          audioRefs.current[key].currentTime = 0;
+        }
+      });
+      setPlayingAudio(null);
+    }
+
+    if (podcastRef.current) {
+      if (podcastPlaying) {
+        podcastRef.current.pause();
+        setPodcastPlaying(false);
+      } else {
+        podcastRef.current.play();
+        setPodcastPlaying(true);
+      }
+    }
+  };
+
+  const handlePodcastTimeUpdate = (e) => {
+    if (podcastRef.current) {
+      const progress = (e.target.currentTime / e.target.duration) * 100;
+      setPodcastProgress(progress);
+    }
+  };
+
+  const handlePodcastEnded = () => {
+    setPodcastPlaying(false);
+    setPodcastProgress(0);
+    if (podcastRef.current) {
+      podcastRef.current.currentTime = 0;
     }
   };
 
@@ -144,6 +212,65 @@ export default function Index() {
 
           <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
             <div className="w-px h-16 bg-gradient-to-b from-transparent via-stone-300 to-transparent" />
+          </div>
+        </div>
+      </section>
+
+      {/* Podcast Section */}
+      <section className="py-24 sm:py-32 px-6 sm:px-8 lg:px-12 bg-white border-b border-stone-200">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-center gap-3 mb-12">
+            <Headphones className="w-8 h-8 text-stone-400" />
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-center">
+              Listen to the Story
+            </h2>
+          </div>
+
+          <div className="bg-stone-50 border border-stone-200 p-8 sm:p-12">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xl sm:text-2xl font-light">
+                  557x Faster Audio AI
+                </h3>
+                <p className="text-stone-500 text-sm font-light leading-relaxed">
+                  How Latent Consistency Models Solved the Real-Time Problem for
+                  Audio Super Resolution
+                </p>
+              </div>
+
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={handlePodcastToggle}
+                  className="flex-shrink-0 w-16 h-16 rounded-full bg-stone-900 text-white flex items-center justify-center hover:bg-stone-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  {podcastPlaying ? (
+                    <Pause className="w-6 h-6" />
+                  ) : (
+                    <Play className="w-6 h-6 ml-1" />
+                  )}
+                </button>
+
+                <div className="flex-1">
+                  <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-stone-900 transition-all rounded-full"
+                      style={{ width: `${podcastProgress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-stone-400 text-xs tracking-wider uppercase text-center">
+                Deep dive into the research and implications
+              </p>
+            </div>
+
+            <audio
+              ref={podcastRef}
+              src="/sounds/podcast.m4a"
+              onTimeUpdate={handlePodcastTimeUpdate}
+              onEnded={handlePodcastEnded}
+            />
           </div>
         </div>
       </section>
@@ -639,21 +766,19 @@ export default function Index() {
               <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
             </a>
 
-            <div className="grid sm:grid-cols-2 gap-6">
-              <a
-                href="https://drive.google.com/file/d/1oVlJaQwjXzvfYT0gtZjwbJHh_wla5cF1/view?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
-              >
-                <FileText className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
-                <h3 className="text-xl font-light mb-3">Full Paper</h3>
-                <p className="text-stone-400 text-sm font-light leading-relaxed">
-                  Complete methodology and analysis
-                </p>
-                <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
-              </a>
-            </div>
+            <a
+              href="https://drive.google.com/file/d/1oVlJaQwjXzvfYT0gtZjwbJHh_wla5cF1/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
+            >
+              <FileText className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
+              <h3 className="text-xl font-light mb-3">Full Paper</h3>
+              <p className="text-stone-400 text-sm font-light leading-relaxed">
+                Complete methodology and analysis
+              </p>
+              <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
+            </a>
           </div>
 
           <div className="mt-20 pt-12 border-t border-stone-200 text-center space-y-2">
