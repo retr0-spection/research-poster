@@ -8,21 +8,6 @@ import {
   ChevronDown,
   Headphones,
 } from "lucide-react";
-import { MetaFunction } from "@remix-run/node";
-
-export const meta: MetaFunction = () => {
-  return [
-    { title: "From minutes to milliseconds: Audio Super Resolution" },
-    {
-      property: "og:title",
-      content: "From minutes to milliseconds: Audio Super Resolution",
-    },
-    {
-      name: "description",
-      content: "Audio Super Resolution Research",
-    },
-  ];
-};
 
 export default function Index() {
   const [scrollY, setScrollY] = useState(0);
@@ -32,6 +17,8 @@ export default function Index() {
   const [playingAudio, setPlayingAudio] = useState(null);
   const [podcastPlaying, setPodcastPlaying] = useState(false);
   const [podcastProgress, setPodcastProgress] = useState(0);
+  const [podcastCurrentTime, setPodcastCurrentTime] = useState(0);
+  const [podcastDuration, setPodcastDuration] = useState(0);
   const [methodologyOpen, setMethodologyOpen] = useState(false);
   const [applicationsOpen, setApplicationsOpen] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
@@ -48,7 +35,6 @@ export default function Index() {
   const intervalsRef = useRef({ lcm: null, mbd: null });
 
   const startAnimation = () => {
-    // Clear any existing intervals
     if (intervalsRef.current.lcm) clearInterval(intervalsRef.current.lcm);
     if (intervalsRef.current.mbd) clearInterval(intervalsRef.current.mbd);
 
@@ -86,7 +72,6 @@ export default function Index() {
     }, 16);
   };
 
-  // Cleanup intervals on unmount
   useEffect(() => {
     return () => {
       if (intervalsRef.current.lcm) clearInterval(intervalsRef.current.lcm);
@@ -100,29 +85,38 @@ export default function Index() {
       label: "Ground Truth",
       subtitle: "24 kHz Original",
       file: "/sounds/ground_truth.wav",
+      spectrogram: "/sounds/ground_truth_spec.png",
+    },
+
+    {
+      id: "mbd",
+      label: "MBD Teacher",
+      subtitle: "61.8s inference",
+      file: "/sounds/mbd.wav",
+      spectrogram: "/sounds/mbd_spec.png",
     },
     {
       id: "lcm",
       label: "LCM Output",
       subtitle: "0.111s inference",
       file: "/sounds/lcm.wav",
-    },
-    {
-      id: "mbd",
-      label: "MBD Teacher",
-      subtitle: "61.8s inference",
-      file: "/sounds/mbd.wav",
+      spectrogram: "/sounds/lcm_spec.png",
     },
   ];
 
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handlePlayAudio = (id) => {
-    // Stop podcast if playing
     if (podcastRef.current && podcastPlaying) {
       podcastRef.current.pause();
       setPodcastPlaying(false);
     }
 
-    // Stop all other audio
     Object.keys(audioRefs.current).forEach((key) => {
       if (key !== id && audioRefs.current[key]) {
         audioRefs.current[key].pause();
@@ -131,13 +125,11 @@ export default function Index() {
     });
 
     if (playingAudio === id) {
-      // Pause current audio
       if (audioRefs.current[id]) {
         audioRefs.current[id].pause();
       }
       setPlayingAudio(null);
     } else {
-      // Play new audio
       if (audioRefs.current[id]) {
         audioRefs.current[id].play();
         setPlayingAudio(id);
@@ -155,7 +147,6 @@ export default function Index() {
   };
 
   const handlePodcastToggle = () => {
-    // Stop all sample audio if playing
     if (playingAudio) {
       Object.keys(audioRefs.current).forEach((key) => {
         if (audioRefs.current[key]) {
@@ -181,12 +172,30 @@ export default function Index() {
     if (podcastRef.current) {
       const progress = (e.target.currentTime / e.target.duration) * 100;
       setPodcastProgress(progress);
+      setPodcastCurrentTime(e.target.currentTime);
+    }
+  };
+
+  const handlePodcastLoaded = () => {
+    if (podcastRef.current) {
+      setPodcastDuration(podcastRef.current.duration);
+    }
+  };
+
+  const handlePodcastSeek = (e) => {
+    if (podcastRef.current) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const newTime = percentage * podcastRef.current.duration;
+      podcastRef.current.currentTime = newTime;
     }
   };
 
   const handlePodcastEnded = () => {
     setPodcastPlaying(false);
     setPodcastProgress(0);
+    setPodcastCurrentTime(0);
     if (podcastRef.current) {
       podcastRef.current.currentTime = 0;
     }
@@ -196,6 +205,26 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-stone-200">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src="/sounds/wits.png" className="w-14" />
+            <div>
+              <h1 className="text-lg font-light tracking-tight">
+                ASR via Latent Consistency
+              </h1>
+              <p className="text-xs text-stone-400">
+                University of the Witwatersrand
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-20"></div>
+
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-6 sm:px-8 lg:px-12">
         <div className="max-w-6xl mx-auto w-full">
@@ -204,11 +233,11 @@ export default function Index() {
               <p className="text-sm sm:text-base tracking-wider uppercase text-stone-400 font-light">
                 Audio Super Resolution Research
               </p>
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight">
+              <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light leading-tight tracking-tight">
                 From minutes
                 <br />
                 <span className="text-stone-400">to milliseconds</span>
-              </h1>
+              </h2>
             </div>
 
             <p className="text-lg sm:text-xl md:text-2xl text-stone-500 font-light max-w-2xl leading-relaxed">
@@ -237,7 +266,7 @@ export default function Index() {
           <div className="flex items-center justify-center gap-3 mb-12">
             <Headphones className="w-8 h-8 text-stone-400" />
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-center">
-              Listen to the Story
+              Listen to the Story as a Podcast
             </h2>
           </div>
 
@@ -253,24 +282,33 @@ export default function Index() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={handlePodcastToggle}
-                  className="flex-shrink-0 w-16 h-16 rounded-full bg-stone-900 text-white flex items-center justify-center hover:bg-stone-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-                >
-                  {podcastPlaying ? (
-                    <Pause className="w-6 h-6" />
-                  ) : (
-                    <Play className="w-6 h-6 ml-1" />
-                  )}
-                </button>
+              <div className="space-y-4">
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={handlePodcastToggle}
+                    className="flex-shrink-0 w-16 h-16 rounded-full bg-stone-900 text-white flex items-center justify-center hover:bg-stone-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    {podcastPlaying ? (
+                      <Pause className="w-6 h-6" />
+                    ) : (
+                      <Play className="w-6 h-6 ml-1" />
+                    )}
+                  </button>
 
-                <div className="flex-1">
-                  <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                  <div className="flex-1 space-y-2">
                     <div
-                      className="h-full bg-stone-900 transition-all rounded-full"
-                      style={{ width: `${podcastProgress}%` }}
-                    />
+                      className="h-2 bg-stone-200 rounded-full overflow-hidden cursor-pointer"
+                      onClick={handlePodcastSeek}
+                    >
+                      <div
+                        className="h-full bg-stone-900 transition-all rounded-full"
+                        style={{ width: `${podcastProgress}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-stone-400 font-light">
+                      <span>{formatTime(podcastCurrentTime)}</span>
+                      <span>{formatTime(podcastDuration)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -282,8 +320,9 @@ export default function Index() {
 
             <audio
               ref={podcastRef}
-              src="/sounds/podcast.m4a"
+              src="/sounds/podcast.mp4"
               onTimeUpdate={handlePodcastTimeUpdate}
+              onLoadedMetadata={handlePodcastLoaded}
               onEnded={handlePodcastEnded}
             />
           </div>
@@ -736,6 +775,30 @@ export default function Index() {
                   </div>
                 </div>
 
+                {/* Mel Spectrogram */}
+                <div className="px-6 sm:px-8 pb-6 sm:pb-8">
+                  <div className="bg-stone-50 border border-stone-200 p-4">
+                    <p className="text-xs text-stone-400 mb-3 tracking-wider uppercase">
+                      Mel Spectrogram
+                    </p>
+                    <div className="aspect-[3/1] bg-stone-100 flex items-center justify-center">
+                      <img
+                        src={sample.spectrogram}
+                        alt={`${sample.label} spectrogram`}
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div className="hidden flex-col items-center justify-center text-stone-400 text-sm">
+                        <span>Spectrogram visualization</span>
+                        <span className="text-xs mt-1">({sample.label})</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Hidden audio element */}
                 <audio
                   ref={(el) => (audioRefs.current[sample.id] = el)}
@@ -745,7 +808,6 @@ export default function Index() {
                     if (playingAudio === sample.id) {
                       const progress =
                         (e.target.currentTime / e.target.duration) * 100;
-                      // Progress bar updates automatically via CSS transition
                     }
                   }}
                 />
@@ -756,62 +818,6 @@ export default function Index() {
           <p className="text-center text-stone-400 text-sm mt-12 font-light">
             Click play to compare audio quality across different models
           </p>
-        </div>
-      </section>
-
-      {/* Research Links Section */}
-      <section className="py-24 sm:py-32 px-6 sm:px-8 lg:px-12 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-light mb-20 text-center tracking-tight">
-            Research
-          </h2>
-
-          <div className="grid sm:grid-cols-2 gap-6">
-            <a
-              href="https://github.com/retr0-spection/ASR-LCM-Research"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
-            >
-              <Github className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
-              <h3 className="text-xl font-light mb-3">Code Repository</h3>
-              <p className="text-stone-400 text-sm font-light leading-relaxed">
-                Implementation details and training scripts
-              </p>
-              <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
-            </a>
-
-            <a
-              href="https://drive.google.com/file/d/1oVlJaQwjXzvfYT0gtZjwbJHh_wla5cF1/view?usp=sharing"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block border border-stone-200 hover:border-stone-900 transition-all duration-300 p-8 sm:p-12"
-            >
-              <FileText className="w-8 h-8 mb-6 text-stone-400 group-hover:text-stone-900 transition-colors" />
-              <h3 className="text-xl font-light mb-3">Full Paper</h3>
-              <p className="text-stone-400 text-sm font-light leading-relaxed">
-                Complete methodology and analysis
-              </p>
-              <ArrowRight className="w-5 h-5 mt-6 text-stone-400 group-hover:text-stone-900 group-hover:translate-x-1 transition-all" />
-            </a>
-          </div>
-
-          <div className="mt-20 pt-12 border-t border-stone-200 text-center space-y-2">
-            <p className="text-stone-400 text-xs tracking-wider uppercase">
-              Research by
-            </p>
-            <a
-              href="https://oratilenailana.netlify.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xl font-light hover:text-stone-600 transition-colors inline-block underline decoration-stone-300 hover:decoration-stone-600 underline-offset-4"
-            >
-              Oratile Nailana
-            </a>
-            <p className="text-stone-400 text-sm font-light">
-              University of the Witwatersrand
-            </p>
-          </div>
         </div>
       </section>
 
